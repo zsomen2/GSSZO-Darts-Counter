@@ -378,20 +378,6 @@ def handle_menu_event(event, input_rects):
 
 # ---------------- GAME RENDERING & EVENTS ----------------
 
-def draw_stat_badge(text, anchor_rect, side: str):
-    """Draw a small 'Legs Won' badge next to the name. side='left' or 'right' relative to name rect."""
-    badge_w, badge_h = 200, 56
-    pad = 16
-    if side == "left":
-        rect = pygame.Rect(anchor_rect.left - pad - badge_w, anchor_rect.centery - badge_h//2, badge_w, badge_h)
-    else:
-        rect = pygame.Rect(anchor_rect.right + pad, anchor_rect.centery - badge_h//2, badge_w, badge_h)
-    pygame.draw.rect(screen, BOX_BG, rect, border_radius=12)
-    pygame.draw.rect(screen, BOX_BORDER, rect, 2, border_radius=12)
-    txt = font_small.render(text, True, TEXT_COLOR)
-    screen.blit(txt, txt.get_rect(center=rect.center))
-    return rect
-
 def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, match_avg_val):
     title = player_names[player_idx]
     title_color = ACCENT_ACTIVE if is_active else ACCENT_INACTIVE
@@ -399,47 +385,74 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
     title_rect = title_surf.get_rect(center=(x_start + width // 2, 70))
     screen.blit(title_surf, title_rect)
 
-    # Legs badge next to name (left player -> badge on left; right player -> on right)
-    side = "left" if player_idx == 0 else "right"
-    legs_text = f"Legs Won: {legs_won[player_idx]}"
-    legs_badge_rect = draw_stat_badge(legs_text, title_rect, side)
+    # --- Static stats placement on each side of the screen ---
+    is_left = (player_idx == 0)
+    stats_margin_x = 40
+    stats_top_y = 30
 
-    # Averages under the badge
-    avg_leg_surf = font_small.render(f"Leg avg: {leg_avg_val:.1f}", True, HINT_COLOR)
-    avg_leg_rect = avg_leg_surf.get_rect(midtop=(legs_badge_rect.centerx, legs_badge_rect.bottom + 8))
-    screen.blit(avg_leg_surf, avg_leg_rect)
+    # Badge geometry (same style for Legs / Leg avg / Match avg)
+    badge_w, badge_h = 200, 56
+    badge_gap_y = 8
 
-    avg_match_surf = font_small.render(f"Match avg: {match_avg_val:.1f}", True, HINT_COLOR)
-    avg_match_rect = avg_match_surf.get_rect(midtop=(legs_badge_rect.centerx, avg_leg_rect.bottom + 6))
-    screen.blit(avg_match_surf, avg_match_rect)
+    if is_left:
+        badge_x = x_start + stats_margin_x
+    else:
+        badge_x = x_start + width - stats_margin_x - badge_w
 
+    # ----- Legs Won badge -----
+    legs_rect = pygame.Rect(badge_x, stats_top_y, badge_w, badge_h)
+    pygame.draw.rect(screen, BOX_BG, legs_rect, border_radius=12)
+    pygame.draw.rect(screen, BOX_BORDER, legs_rect, 2, border_radius=12)
+    legs_text_surf = font_small.render(f"Legs Won: {legs_won[player_idx]}", True, TEXT_COLOR)
+    screen.blit(legs_text_surf, legs_text_surf.get_rect(center=legs_rect.center))
+
+    # ----- Leg average badge -----
+    leg_avg_rect = pygame.Rect(badge_x, legs_rect.bottom + badge_gap_y, badge_w, badge_h)
+    pygame.draw.rect(screen, BOX_BG, leg_avg_rect, border_radius=12)
+    pygame.draw.rect(screen, BOX_BORDER, leg_avg_rect, 2, border_radius=12)
+    leg_avg_text_surf = font_small.render(f"Leg avg: {leg_avg_val:.1f}", True, TEXT_COLOR)
+    screen.blit(leg_avg_text_surf, leg_avg_text_surf.get_rect(center=leg_avg_rect.center))
+
+    # ----- Match average badge -----
+    match_avg_rect = pygame.Rect(badge_x, leg_avg_rect.bottom + badge_gap_y, badge_w, badge_h)
+    pygame.draw.rect(screen, BOX_BG, match_avg_rect, border_radius=12)
+    pygame.draw.rect(screen, BOX_BORDER, match_avg_rect, 2, border_radius=12)
+    match_avg_text_surf = font_small.render(f"Match avg: {match_avg_val:.1f}", True, TEXT_COLOR)
+    screen.blit(match_avg_text_surf, match_avg_text_surf.get_rect(center=match_avg_rect.center))
+
+    # ----- Remaining score -----
     total_scored = sum(scores[player_idx])
     remaining = START_SCORE - total_scored
 
+    # Place "Remaining" below the badges so nothing overlaps
+    rem_label_y = match_avg_rect.bottom + 40
     rem_label_surf = font_med.render("Remaining:", True, TEXT_COLOR)
-    rem_label_rect = rem_label_surf.get_rect(center=(x_start + width // 2, 150))
+    rem_label_rect = rem_label_surf.get_rect(center=(x_start + width // 2, rem_label_y))
     screen.blit(rem_label_surf, rem_label_rect)
 
     rem_surf = font_huge.render(str(remaining), True, TEXT_COLOR)
-    rem_rect = rem_surf.get_rect(center=(x_start + width // 2, 230))
+    rem_rect = rem_surf.get_rect(center=(x_start + width // 2, rem_label_y + 80))
     screen.blit(rem_surf, rem_rect)
 
     # Decide horizontal divider Y: below remaining number, above input label
-    input_label_y = 290               # where "Current input:" is drawn
     pad_below_remaining = 8
-    hline_y = min(rem_rect.bottom + pad_below_remaining, input_label_y - 8)
 
+    # ----- Current input (only for active player) -----
+    input_label_y = rem_rect.bottom + 40
     if is_active:
         input_label = font_small.render("Current input:", True, TEXT_COLOR)
         screen.blit(input_label, (x_start + 40, input_label_y))
+
         input_text = current_input if current_input != "" else "-"
         input_surf = font_big.render(input_text, True, TEXT_COLOR)
-        screen.blit(input_surf, (x_start + 40, 320))
+        screen.blit(input_surf, (x_start + 40, input_label_y + 30))
 
+    # ----- Rounds list -----
+    rounds_label_y = input_label_y + 80
     rounds_label = font_small.render("Rounds (last at bottom):", True, TEXT_COLOR)
-    screen.blit(rounds_label, (x_start + 40, 380))
+    screen.blit(rounds_label, (x_start + 40, rounds_label_y))
 
-    start_y = 410
+    start_y = rounds_label_y + 30
     line_height = 38
     max_lines = max(1, (HEIGHT - start_y - 60) // line_height)
 
@@ -455,7 +468,8 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
         screen.blit(round_surf, (x_start + 40, y))
         y += line_height
 
-    # Return the computed horizontal divider Y for this side
+    # Horizontal divider should sit just under the remaining score, but above the input label
+    hline_y = min(rem_rect.bottom + pad_below_remaining, input_label_y - 8)
     return hline_y
 
 # ---- Logo drawing with 20 px gaps above and below ----
