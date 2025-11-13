@@ -3,3 +3,6 @@ dist
 build
 
 gsszo_darts_counter.spec
+
+# sponsors and organizers
+display_bar/*
