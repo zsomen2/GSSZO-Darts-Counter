@@ -13,7 +13,7 @@ player_names = ["Player 1", "Player 2"]
 display_info = pygame.display.Info()
 WIDTH, HEIGHT = display_info.current_w, display_info.current_h
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
-pygame.display.set_caption(f"Darts Counter - 2 Players ({START_SCORE})")
+pygame.display.set_caption(f"GSSZO Darts Counter")
 
 # Colors
 BG_COLOR = (20, 20, 20)
@@ -143,7 +143,7 @@ def reset_game(new_start_score: int, p1: str, p2: str, target_legs: int = None, 
     winner_idx = None
 
     state = STATE_GAME
-    pygame.display.set_caption(f"Darts Counter - 2 Players ({START_SCORE})")
+    pygame.display.set_caption(f"GSSZO Darts Counter")
 
 def start_new_leg():
     """Start the next leg, alternating starter."""
@@ -192,16 +192,38 @@ def draw_score_switch(x, y, w, h, active: bool, selected: str):
 
     pygame.draw.rect(screen, BOX_BG, outer, border_radius=10)
 
+    # Highlight the selected side
     if selected == "301":
         pygame.draw.rect(screen, ACCENT_ACTIVE, r301, border_radius=10)
     else:
         pygame.draw.rect(screen, ACCENT_ACTIVE, r501, border_radius=10)
 
-    pygame.draw.line(screen, BOX_BORDER, (outer.x + half_w, outer.y + 6), (outer.x + half_w, outer.y + h - 6), 2)
-    pygame.draw.rect(screen, BOX_BORDER_ACTIVE if active else BOX_BORDER, outer, 2, border_radius=10)
+    pygame.draw.line(
+        screen,
+        BOX_BORDER,
+        (outer.x + half_w, outer.y + 6),
+        (outer.x + half_w, outer.y + h - 6),
+        2,
+    )
+    pygame.draw.rect(
+        screen,
+        BOX_BORDER_ACTIVE if active else BOX_BORDER,
+        outer,
+        2,
+        border_radius=10,
+    )
 
-    t301 = font_med.render("301", True, TEXT_COLOR)
-    t501 = font_med.render("501", True, TEXT_COLOR)
+    # --- Text colors: dark on the selected background ---
+    if selected == "301":
+        t301_color = BTN_BG       # dark on bright green
+        t501_color = TEXT_COLOR     # normal on dark background
+    else:
+        t301_color = TEXT_COLOR
+        t501_color = BTN_BG
+
+    t301 = font_med.render("301", True, t301_color)
+    t501 = font_med.render("501", True, t501_color)
+
     screen.blit(t301, t301.get_rect(center=r301.center))
     screen.blit(t501, t501.get_rect(center=r501.center))
 
@@ -246,7 +268,7 @@ def draw_menu():
     global start_btn_rect
     screen.fill(BG_COLOR)
 
-    title = "Darts Counter – Setup"
+    title = "GSSZO Darts Counter"
     title_surf = font_title.render(title, True, TEXT_COLOR)
     title_rect = title_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 330))
     screen.blit(title_surf, title_rect)
