@@ -192,12 +192,24 @@ def revert_last_finished_leg():
 def draw_input_box(x, y, w, h, label, value, active=False):
     label_surf = font_small.render(label, True, HINT_COLOR)
     screen.blit(label_surf, (x, y - 26))
+
     rect = pygame.Rect(x, y, w, h)
     pygame.draw.rect(screen, BOX_BG, rect, border_radius=10)
-    pygame.draw.rect(screen, BOX_BORDER_ACTIVE if active else BOX_BORDER, rect, 2, border_radius=10)
+    pygame.draw.rect(
+        screen,
+        BOX_BORDER_ACTIVE if active else BOX_BORDER,
+        rect,
+        2,
+        border_radius=10,
+    )
+
     text_surf = font_med.render(value, True, TEXT_COLOR)
     text_rect = text_surf.get_rect(midleft=(x + 14, y + h // 2))
     screen.blit(text_surf, text_rect)
+
+    if active:
+        draw_focus_arrows(rect)
+
     return rect
 
 def draw_score_switch(x, y, w, h, active: bool, selected: str):
@@ -232,10 +244,10 @@ def draw_score_switch(x, y, w, h, active: bool, selected: str):
         border_radius=10,
     )
 
-    # --- Text colors: dark on the selected background ---
+    # Text colors
     if selected == "301":
-        t301_color = BTN_BG       # dark on bright green
-        t501_color = TEXT_COLOR     # normal on dark background
+        t301_color = BTN_BG
+        t501_color = TEXT_COLOR
     else:
         t301_color = TEXT_COLOR
         t501_color = BTN_BG
@@ -245,6 +257,9 @@ def draw_score_switch(x, y, w, h, active: bool, selected: str):
 
     screen.blit(t301, t301.get_rect(center=r301.center))
     screen.blit(t501, t501.get_rect(center=r501.center))
+
+    if active:
+        draw_focus_arrows(outer)
 
     return outer, r301, r501
 
@@ -256,10 +271,16 @@ def draw_checkbox(x, y, w, h, label, checked: bool, active: bool):
 
     rect = pygame.Rect(x, y, w, h)
     pygame.draw.rect(screen, BOX_BG, rect, border_radius=10)
-    pygame.draw.rect(screen, BOX_BORDER_ACTIVE if active else BOX_BORDER, rect, 2, border_radius=10)
+    pygame.draw.rect(
+        screen,
+        BOX_BORDER_ACTIVE if active else BOX_BORDER,
+        rect,
+        2,
+        border_radius=10,
+    )
 
     pad = 8
-    inner = pygame.Rect(x + pad, y + pad, h - 2*pad, h - 2*pad)
+    inner = pygame.Rect(x + pad, y + pad, h - 2 * pad, h - 2 * pad)
     pygame.draw.rect(screen, BTN_BG, inner, border_radius=8)
     if checked:
         pygame.draw.rect(screen, ACCENT_ACTIVE, inner, border_radius=8)
@@ -269,6 +290,9 @@ def draw_checkbox(x, y, w, h, label, checked: bool, active: bool):
     txt_rect = txt_surf.get_rect(midleft=(inner.right + 16, y + h // 2))
     screen.blit(txt_surf, txt_rect)
 
+    if active:
+        draw_focus_arrows(rect)
+
     doubleout_rect = rect
     return rect
 
@@ -276,11 +300,28 @@ def draw_button(x, y, w, h, label, focused=False):
     mouse_pos = pygame.mouse.get_pos()
     rect = pygame.Rect(x, y, w, h)
     hover = rect.collidepoint(mouse_pos)
-    pygame.draw.rect(screen, BTN_BG_HOVER if hover else BTN_BG, rect, border_radius=12)
-    pygame.draw.rect(screen, BOX_BORDER_ACTIVE if focused else BOX_BORDER, rect, 3 if focused else 2, border_radius=12)
+
+    pygame.draw.rect(
+        screen,
+        BTN_BG_HOVER if hover else BTN_BG,
+        rect,
+        border_radius=12,
+    )
+    pygame.draw.rect(
+        screen,
+        BOX_BORDER_ACTIVE if focused else BOX_BORDER,
+        rect,
+        3 if focused else 2,
+        border_radius=12,
+    )
+
     txt = font_big.render(label, True, TEXT_COLOR)
     txt_rect = txt.get_rect(center=rect.center)
     screen.blit(txt, txt_rect)
+
+    if focused:
+        draw_focus_arrows(rect)
+
     return rect, hover
 
 def draw_menu():
@@ -311,7 +352,7 @@ def draw_menu():
 
     legs_rect = draw_input_box(
         col_x, y0 + 3*gap_y, col_w, box_h,
-        "Legs to win (number)", menu_values["legs"], active_input_key == "legs"
+        "Legs to win", menu_values["legs"], active_input_key == "legs"
     )
 
     dob_rect = draw_checkbox(
@@ -320,7 +361,7 @@ def draw_menu():
     )
 
     start_btn_rect, _ = draw_button(
-        col_x, y0 + 5*gap_y + 10, col_w, box_h + 10,
+        col_x, y0 + 5*gap_y, col_w, box_h + 10,
         "Start",
         focused=(active_input_key == "start")
     )
@@ -415,6 +456,22 @@ def handle_menu_event(event, input_rects):
                     menu_values["legs"] += event.unicode
         elif active_input_key == "doubleout" and event.key == pygame.K_SPACE:
             menu_values["doubleout"] = not bool(menu_values["doubleout"]); return
+
+def draw_focus_arrows(rect: pygame.Rect):
+    """Draw < and > around an actively selected menu element."""
+    left_arrow_surf = font_big.render(">", True, ACCENT_ACTIVE)
+    right_arrow_surf = font_big.render("<", True, ACCENT_ACTIVE)
+
+    left_arrow_rect = left_arrow_surf.get_rect(
+        midright=(rect.left - 10, rect.centery - 5)
+    )
+    right_arrow_rect = right_arrow_surf.get_rect(
+        midleft=(rect.right + 10, rect.centery - 5)
+    )
+
+    screen.blit(left_arrow_surf, left_arrow_rect)
+    screen.blit(right_arrow_surf, right_arrow_rect)
+
 
 # region GAME RENDERING & EVENTS
 
