@@ -90,7 +90,6 @@ def _load_alpha(path):
 # Preferred two-piece assets
 LOGO_INNER_ORIG = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_inner.png"))
 LOGO_RING_ORIG  = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_outer.png"))
-ROTATION_SPEED = 1000
 
 # ---------------- UTILITIES ----------------
 
@@ -735,7 +734,7 @@ def main():
 
         elif state == STATE_GAME:
             # Update rotation angle based on elapsed time since last tick
-            dt = clock.get_time() / ROTATION_SPEED  # seconds
+            dt = clock.get_time() / 1000  # seconds
             global LOGO_ANGLE
             LOGO_ANGLE = (LOGO_ANGLE + LOGO_ROT_SPEED_DEG * dt) % 360.0
 
