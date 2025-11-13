@@ -5,7 +5,7 @@ import copy
 
 pygame.init()
 
-# ---- DEFAULTS (overridden by menu) ----
+# region DEFAULTS
 START_SCORE = 301
 player_names = ["Player 1", "Player 2"]
 
@@ -34,7 +34,7 @@ font_huge  = pygame.font.SysFont(None, 110)
 font_big   = pygame.font.SysFont(None, 72)
 font_med   = pygame.font.SysFont(None, 46)
 font_small = pygame.font.SysFont(None, 30)
-font_round = pygame.font.SysFont(None, 36)
+font_round = pygame.font.SysFont(None, 46)
 
 clock = pygame.time.Clock()
 
@@ -91,7 +91,7 @@ def _load_alpha(path):
 LOGO_INNER_ORIG = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_inner.png"))
 LOGO_RING_ORIG  = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_outer.png"))
 
-# ---------------- UTILITIES ----------------
+# region UTILITIES
 
 def is_leg_pristine():
     """True if the current leg has no typed digits and no committed throws."""
@@ -118,7 +118,7 @@ def match_averages():
         counts[p] += len(scores[p])
     return [ (totals[p] / counts[p]) if counts[p] else 0.0 for p in (0,1) ]
 
-# ---------------- MATCH CONTROL ----------------
+# region MATCH CONTROL
 
 def reset_game(new_start_score: int, p1: str, p2: str, target_legs: int = None, double_out: bool = True):
     """Reset the WHOLE match (new game from menu)."""
@@ -168,7 +168,7 @@ def revert_last_finished_leg():
     current_input = ""
     undo_last_score()  # remove winning throw
 
-# ---------------- MENU RENDERING & EVENTS ----------------
+# region MENU AND RENDERING EVENTS
 
 def draw_input_box(x, y, w, h, label, value, active=False):
     label_surf = font_small.render(label, True, HINT_COLOR)
@@ -254,7 +254,7 @@ def draw_menu():
     col_x = WIDTH // 2 - 380
     col_w = 760
     box_h = 70
-    gap_y = 95
+    gap_y = 105
     y0 = HEIGHT // 2 - 250
 
     p1_rect = draw_input_box(col_x, y0 + 0*gap_y, col_w, box_h,
@@ -375,14 +375,20 @@ def handle_menu_event(event, input_rects):
         elif active_input_key == "doubleout" and event.key == pygame.K_SPACE:
             menu_values["doubleout"] = not bool(menu_values["doubleout"]); return
 
-# ---------------- GAME RENDERING & EVENTS ----------------
+# region GAME RENDERING & EVENTS
 
 def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, match_avg_val):
     title = player_names[player_idx]
     title_color = ACCENT_ACTIVE if is_active else ACCENT_INACTIVE
-    title_surf = font_big.render(title, True, title_color)
-    title_rect = title_surf.get_rect(center=(x_start + width // 2, 70))
-    screen.blit(title_surf, title_rect)
+    title_top_center = (x_start + width // 2, 50)  # adjust 50 up/down if needed
+
+    draw_player_name_multiline(
+        screen,
+        font_big,          # same font you used before
+        title,
+        title_color,
+        title_top_center,
+    )
 
     # --- Static stats placement on each side of the screen ---
     is_left = (player_idx == 0)
@@ -448,28 +454,112 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
 
     # ----- Rounds list -----
     rounds_label_y = input_label_y + 80
-    rounds_label = font_small.render("Rounds (last at bottom):", True, TEXT_COLOR)
+    rounds_label = font_small.render("Rounds:", True, TEXT_COLOR)
     screen.blit(rounds_label, (x_start + 40, rounds_label_y))
 
-    start_y = rounds_label_y + 30
-    line_height = 38
+    # Table header
+    header_y = rounds_label_y + 30
+    col_round_x = x_start + 40
+    col_score_x = x_start + 140
+    col_rem_x   = x_start + 320
+
+    header_hash  = font_round.render("#", True, TEXT_COLOR)
+    header_score = font_round.render("Score", True, TEXT_COLOR)
+    header_rem   = font_round.render("Remaining", True, TEXT_COLOR)
+
+    screen.blit(header_hash,  (col_round_x, header_y))
+    screen.blit(header_score, (col_score_x, header_y))
+    screen.blit(header_rem,   (col_rem_x,   header_y))
+
+    start_y = header_y + 36
+    line_height = 36  # bigger spacing for the larger font
     max_lines = max(1, (HEIGHT - start_y - 60) // line_height)
 
     player_scores = scores[player_idx]
-    visible_scores = player_scores[-max_lines:]
-    start_round_index = len(player_scores) - len(visible_scores) + 1
 
-    y = start_y
-    for i, s in enumerate(visible_scores):
+    # Precompute remaining after each throw in this leg
+    remaining_list = []
+    rem_tmp = START_SCORE
+    for s in player_scores:
+        rem_tmp -= s
+        remaining_list.append(rem_tmp)
+
+    # Only show the last max_lines throws
+    visible_scores     = player_scores[-max_lines:]
+    visible_remaining  = remaining_list[-max_lines:]
+    start_round_index  = len(player_scores) - len(visible_scores) + 1
+
+    y = start_y + 10
+    for i, (s, rem_after) in enumerate(zip(visible_scores, visible_remaining)):
         round_num = start_round_index + i
-        round_text = f"{round_num}.  {s}"
+
+        # Limit display to max 3 digits and right-align in a 3-char field
+        score_val = min(s, 999)
+        rem_val   = min(rem_after, 999)
+
+        round_text = f"{round_num}."
+        score_text = f"{score_val:>3}"
+        rem_text   = f"{rem_val:>3}"
+
         round_surf = font_round.render(round_text, True, TEXT_COLOR)
-        screen.blit(round_surf, (x_start + 40, y))
+        score_surf = font_round.render(score_text, True, TEXT_COLOR)
+        rem_surf   = font_round.render(rem_text,   True, TEXT_COLOR)
+
+        screen.blit(round_surf, (col_round_x, y))
+        screen.blit(score_surf, (col_score_x + 10, y))
+        screen.blit(rem_surf,   (col_rem_x + 40,   y))
+
         y += line_height
 
     # Horizontal divider should sit just under the remaining score, but above the input label
     hline_y = min(rem_rect.bottom + pad_below_remaining, input_label_y - 8)
     return hline_y
+
+def draw_player_name_multiline(surface, font, text, color, top_center_pos):
+    """
+    Draw the player name in up to 3 lines with a fixed top.
+
+    Rules:
+    - Max total length of the name: 45 characters (extra is truncated).
+    - Wrap only at spaces.
+    - Start a new line if adding the next word would make the line > 15 characters.
+    - Lines stack downward from a fixed top y.
+    """
+    if not text:
+        return
+
+    # Enforce max total length
+    text = text[:45]
+
+    # Split into words (collapses multiple spaces)
+    words = text.split()
+    if not words:
+        return
+
+    # Build lines with max 15 characters per line (wrapping at spaces)
+    lines = []
+    current_line = words[0]
+
+    for word in words[1:]:
+        # +1 for the space
+        if len(current_line) + 1 + len(word) <= 15:
+            current_line += " " + word
+        else:
+            lines.append(current_line)
+            current_line = word
+
+    lines.append(current_line)
+
+    # Draw lines with fixed top
+    cx, top_y = top_center_pos
+    line_gap = 4  # pixels between lines
+    y = top_y
+
+    for line in lines:
+        surf = font.render(line, True, color)
+        rect = surf.get_rect(midtop=(cx, y))
+        surface.blit(surf, rect)
+        y = rect.bottom + line_gap
 
 # ---- Logo drawing with 20 px gaps above and below ----
 def draw_logo_layers(max_bottom_y: int, angle_deg: float):
@@ -662,7 +752,7 @@ def handle_game_keydown(event):
             else:
                 undo_last_score()
 
-# ---------------- END SCREEN ----------------
+# region END SCREEN
 
 def draw_end():
     screen.fill(BG_COLOR)
@@ -678,17 +768,22 @@ def draw_end():
         win_rect = win_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 80))
         screen.blit(win_surf, win_rect)
 
-    legs_line = f"Final Legs — {player_names[0]}: {legs_won[0]}   |   {player_names[1]}: {legs_won[1]}   (First to {LEGS_TO_WIN})   •   Double Out: {'ON' if DOUBLE_OUT_ENABLED else 'OFF'}"
-    legs_surf = font_med.render(legs_line, True, TEXT_COLOR)
-    legs_rect = legs_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 10))
+    player_line = f"{player_names[0]} vs. {player_names[1]}"
+    player_surf = font_med.render(player_line, True, TEXT_COLOR)
+    player_rect = player_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 10))
+    screen.blit(player_surf, player_rect)
+
+    legs_line = f"Legs won:  {legs_won[0]}   |   {legs_won[1]}"
+    legs_surf = font_small.render(legs_line, True, HINT_COLOR)
+    legs_rect = legs_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 60))
     screen.blit(legs_surf, legs_rect)
 
     # Informational: remaining scores in the finishing leg snapshot
     rem0 = START_SCORE - sum(scores[0])
     rem1 = START_SCORE - sum(scores[1])
-    rem_line = f"{player_names[0]} remaining: {rem0}    |    {player_names[1]} remaining: {rem1}"
+    rem_line = f"Remaining:  {rem0}    |    {rem1}"
     rem_surf = font_small.render(rem_line, True, HINT_COLOR)
-    rem_rect = rem_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 60))
+    rem_rect = rem_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
     screen.blit(rem_surf, rem_rect)
 
     pygame.display.flip()
@@ -719,7 +814,7 @@ def handle_end_event(event):
             reset_game(START_SCORE, player_names[0], player_names[1], LEGS_TO_WIN, DOUBLE_OUT_ENABLED)
             return
 
-# ---------------- MAIN LOOP ----------------
+# region MAIN LOOP
 
 def main():
     global state, active_input_key
@@ -736,7 +831,8 @@ def main():
             # Update rotation angle based on elapsed time since last tick
             dt = clock.get_time() / 1000  # seconds
             global LOGO_ANGLE
-            LOGO_ANGLE = (LOGO_ANGLE + LOGO_ROT_SPEED_DEG * dt) % 360.0
+            rot_dir = 1 if active_player == 0 else -1
+            LOGO_ANGLE = (LOGO_ANGLE + rot_dir * LOGO_ROT_SPEED_DEG * dt) % 360.0
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
