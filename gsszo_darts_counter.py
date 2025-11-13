@@ -1,6 +1,7 @@
 import pygame
 import sys
-import copy  # for leg snapshots
+import os
+import copy
 
 pygame.init()
 
@@ -69,6 +70,27 @@ menu_values = {
 active_input_key = "p1"    # "p1" | "p2" | "score" | "legs" | "doubleout" | "start"
 start_btn_rect = None      # set in draw_menu()
 doubleout_rect = None      # set in draw_menu()
+
+# ---- ASSETS: LOGO (two-layer, with fallback) ----
+ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
+LOGO_TOP_GAP = 20          # px gap between screen top and logo top
+LOGO_BOTTOM_GAP = 20       # px gap between logo bottom and horizontal divider
+LOGO_SIDE_MARGIN = 20      # px side margin for width constraint
+
+# Rotation settings
+LOGO_ROT_SPEED_DEG = 40.0  # degrees per second
+LOGO_ANGLE = 0.0           # will be updated every frame
+
+def _load_alpha(path):
+    try:
+        return pygame.image.load(path).convert_alpha()
+    except Exception:
+        return None
+
+# Preferred two-piece assets
+LOGO_INNER_ORIG = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_inner.png"))
+LOGO_RING_ORIG  = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_outer.png"))
+ROTATION_SPEED = 1000
 
 # ---------------- UTILITIES ----------------
 
@@ -405,7 +427,6 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
     # Decide horizontal divider Y: below remaining number, above input label
     input_label_y = 290               # where "Current input:" is drawn
     pad_below_remaining = 8
-    # keep a little gap to the input label
     hline_y = min(rem_rect.bottom + pad_below_remaining, input_label_y - 8)
 
     if is_active:
@@ -437,6 +458,38 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
     # Return the computed horizontal divider Y for this side
     return hline_y
 
+# ---- Logo drawing with 20 px gaps above and below ----
+def draw_logo_layers(max_bottom_y: int, angle_deg: float):
+    """
+    Draw the centered logo at the top as a circle with:
+      - top at LOGO_TOP_GAP
+      - bottom at max_bottom_y - LOGO_BOTTOM_GAP
+    The outer ring rotates by angle_deg, the inner stays fixed.
+    Falls back to a single static image if two-piece assets are missing.
+    """
+    # Compute available diameter from vertical gap and side margin
+    available_h = max_bottom_y - LOGO_TOP_GAP - LOGO_BOTTOM_GAP
+    if available_h <= 1:
+        return
+
+    max_w = max(1, WIDTH - 2 * LOGO_SIDE_MARGIN)
+    diameter = int(max(1, min(available_h, max_w)))
+    cx = WIDTH // 2
+    cy = LOGO_TOP_GAP + diameter // 2
+
+    # Scale both layers to the target diameter once per frame
+    inner_scaled = pygame.transform.smoothscale(LOGO_INNER_ORIG, (diameter, diameter))
+    ring_scaled  = pygame.transform.smoothscale(LOGO_RING_ORIG,  (diameter, diameter))
+
+    # Rotate the ring around its center.
+    # Note: rotozoom enlarges the bounding rectangle due to rotation, so we center it on (cx, cy)
+    ring_rot = pygame.transform.rotozoom(ring_scaled, angle_deg, 1.0)
+
+    # Blit order: inner first, then the rotating ring on top
+    screen.blit(inner_scaled, inner_scaled.get_rect(center=(cx, cy)))
+    screen.blit(ring_rot,     ring_rot.get_rect(center=(cx, cy)))
+    return
+
 def draw_game():
     screen.fill(BG_COLOR)
 
@@ -453,10 +506,13 @@ def draw_game():
     # Use the lower (max) so the line is surely under both "Remaining" numbers
     hline_y = max(left_hy, right_hy)
 
+    # Draw layered logo with rotation, honoring the 20 px gaps
+    draw_logo_layers(hline_y, LOGO_ANGLE)
+
     # Center vertical line from bottom up to the horizontal divider
     pygame.draw.line(screen, DIVIDER_COLOR, (half_width, HEIGHT), (half_width, hline_y), 3)
 
-    # New horizontal divider across the screen
+    # Horizontal divider across the screen
     pygame.draw.line(screen, DIVIDER_COLOR, (0, hline_y), (WIDTH, hline_y), 3)
 
     pygame.display.flip()
@@ -664,11 +720,17 @@ def main():
                 handle_menu_event(event, rects)
 
         elif state == STATE_GAME:
+            # Update rotation angle based on elapsed time since last tick
+            dt = clock.get_time() / ROTATION_SPEED  # seconds
+            global LOGO_ANGLE
+            LOGO_ANGLE = (LOGO_ANGLE + LOGO_ROT_SPEED_DEG * dt) % 360.0
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit(); sys.exit()
                 elif event.type == pygame.KEYDOWN:
                     handle_game_keydown(event)
+
             draw_game()
 
         elif state == STATE_END:
