@@ -2,6 +2,7 @@ import pygame
 import sys
 import os
 import copy
+import re
 
 pygame.init()
 
@@ -46,6 +47,13 @@ BOX_BORDER = (90, 90, 90)
 BOX_BORDER_ACTIVE = (160, 160, 160)
 BTN_BG = (60, 60, 60)
 BTN_BG_HOVER = (80, 80, 80)
+SPONSOR_BAR_BG = (60, 60, 60)
+SPONSOR_BAR_BORDER = (70, 70, 70)
+SPONSOR_TEXT_COLOR = (240, 240, 240)
+SPONSOR_BAR_HEIGHT = 40  # adjustable height for the sponsor ticker
+SPONSOR_SCROLL_SPEED = 20  # pixels per second
+SPONSOR_LOGO_GAP = 24
+SPONSOR_ENTRY_GAP = 80
 
 # Fonts
 font_title = pygame.font.SysFont(None, 100)
@@ -54,8 +62,10 @@ font_big   = pygame.font.SysFont(None, 72)
 font_med   = pygame.font.SysFont(None, 46)
 font_small = pygame.font.SysFont(None, 30)
 font_round = pygame.font.SysFont(None, 46)
+font_sponsor = pygame.font.SysFont(None, 32)
 
 clock = pygame.time.Clock()
+frame_dt = 0.0
 
 # ---- STATES ----
 STATE_MENU = "MENU"
@@ -84,11 +94,11 @@ menu_values = {
     "p2": player_names[1],
     "score": "301",   # "301" or "501"
     "legs": "2",      # number as string
-    "doubleout": True
+    "doubleout": True,
+    "showsponsors": False,
 }
 active_input_key = "p1"    # "p1" | "p2" | "score" | "legs" | "doubleout" | "start"
 start_btn_rect = None      # set in draw_menu()
-doubleout_rect = None      # set in draw_menu()
 
 # ---- ASSETS: LOGO (two-layer, with fallback) ----
 ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
@@ -109,6 +119,194 @@ def _load_alpha(path):
 # Preferred two-piece assets
 LOGO_INNER_ORIG = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_inner.png"))
 LOGO_RING_ORIG  = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_outer.png"))
+
+# region SPONSOR BAR SUPPORT
+
+SPONSOR_LIST_PATH = resource_path(os.path.join("display_bar", "sponsors.txt"))
+ORGANIZERS_LIST_PATH = resource_path(os.path.join("display_bar", "organizers.txt"))
+SPONSOR_LOGO_DIR = resource_path(os.path.join("display_bar", "logos"))
+
+
+class SponsorTicker:
+    def __init__(self):
+        self.height = max(40, int(SPONSOR_BAR_HEIGHT))
+        self.entries = []
+        self.segment_surface = None
+        self.segment_width = 0
+        self.scroll_offset = 0.0
+
+    def _normalize_name(self, name: str) -> str:
+        normalized = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+        return normalized
+
+    def _append_surface_entry(self, entry_specs, surface: pygame.Surface):
+        """Append a plain surface entry if it has a visible width."""
+        if surface is None or surface.get_width() <= 0:
+            return
+        entry_specs.append({
+            "kind": "surface",
+            "surface": surface,
+            "width": surface.get_width(),
+        })
+
+    def _read_sponsor_names(self):
+        try:
+            with open(SPONSOR_LIST_PATH, "r", encoding="utf-8") as handle:
+                return [line.strip() for line in handle if line.strip()]
+        except FileNotFoundError:
+            return []
+        except Exception as exc:
+            print("Could not read sponsors.txt:", exc)
+            return []
+
+    def _read_organizer_names(self):
+        try:
+            with open(ORGANIZERS_LIST_PATH, "r", encoding="utf-8") as handle:
+                return [line.strip() for line in handle if line.strip()]
+        except FileNotFoundError:
+            return []
+        except Exception as exc:
+            print("Could not read organizers.txt:", exc)
+            return []
+
+    def _load_logo(self, normalized_name: str):
+        if not normalized_name:
+            return None
+        possible_exts = ("png", "jpg", "jpeg", "bmp", "gif")
+        for ext in possible_exts:
+            logo_path = os.path.join(SPONSOR_LOGO_DIR, f"{normalized_name}_logo.{ext}")
+            if os.path.isfile(logo_path):
+                try:
+                    return pygame.image.load(logo_path).convert_alpha()
+                except Exception as exc:
+                    print(f"Failed to load sponsor logo '{logo_path}':", exc)
+        return None
+
+    def reload(self):
+        self.height = max(40, int(SPONSOR_BAR_HEIGHT))
+        names = self._read_sponsor_names()
+        organizers = self._read_organizer_names()
+        self.entries = []
+        self.segment_surface = None
+        self.segment_width = 0
+        self.scroll_offset = 0.0
+
+        entry_specs = []
+        logo_target_h = max(10, self.height - 10)
+
+        if names:
+            prefix_surface = font_sponsor.render("Támogatóink:", True, SPONSOR_TEXT_COLOR)
+            self._append_surface_entry(entry_specs, prefix_surface)
+
+        for name in names:
+            text_surface = font_sponsor.render(name, True, SPONSOR_TEXT_COLOR)
+            normalized = self._normalize_name(name)
+            raw_logo = self._load_logo(normalized)
+            logo_surface = None
+
+            if raw_logo is not None and raw_logo.get_height() > 0:
+                scale_ratio = logo_target_h / raw_logo.get_height()
+                logo_width = max(1, int(raw_logo.get_width() * scale_ratio))
+                logo_surface = pygame.transform.smoothscale(raw_logo, (logo_width, logo_target_h))
+
+            entry_width = text_surface.get_width()
+            if logo_surface is not None:
+                entry_width += logo_surface.get_width()
+                if text_surface.get_width() > 0:
+                    entry_width += SPONSOR_LOGO_GAP
+
+            entry_specs.append({
+                "kind": "sponsor",
+                "text_surface": text_surface,
+                "logo_surface": logo_surface,
+                "entry_width": entry_width,
+            })
+
+        if organizers:
+            header_surface = font_sponsor.render("Szervezők:", True, SPONSOR_TEXT_COLOR)
+            self._append_surface_entry(entry_specs, header_surface)
+
+            for name in organizers:
+                text_surface = font_sponsor.render(name, True, SPONSOR_TEXT_COLOR)
+                self._append_surface_entry(entry_specs, text_surface)
+
+        if not entry_specs:
+            return
+
+        leading_padding = SPONSOR_ENTRY_GAP
+        trailing_padding = SPONSOR_ENTRY_GAP
+        total_width = leading_padding + trailing_padding
+
+        for spec in entry_specs:
+            if spec["kind"] == "sponsor":
+                total_width += spec["entry_width"] + SPONSOR_ENTRY_GAP
+            else:
+                total_width += spec["width"] + SPONSOR_ENTRY_GAP
+
+        self.segment_width = max(1, int(total_width))
+        self.segment_surface = pygame.Surface((self.segment_width, self.height), pygame.SRCALPHA)
+        center_y = self.height // 2
+
+        x = leading_padding
+        for spec in entry_specs:
+            if spec["kind"] == "sponsor":
+                logo_surface = spec["logo_surface"]
+                if logo_surface is not None:
+                    logo_rect = logo_surface.get_rect(midleft=(x, center_y))
+                    self.segment_surface.blit(logo_surface, logo_rect)
+                    x = logo_rect.right
+                    if spec["text_surface"].get_width() > 0:
+                        x += SPONSOR_LOGO_GAP
+
+                text_surface = spec["text_surface"]
+                if text_surface.get_width() > 0:
+                    text_rect = text_surface.get_rect(midleft=(x, center_y))
+                    self.segment_surface.blit(text_surface, text_rect)
+                    x = text_rect.right
+
+                x += SPONSOR_ENTRY_GAP
+            else:
+                surface = spec["surface"]
+                surf_rect = surface.get_rect(midleft=(x, center_y))
+                self.segment_surface.blit(surface, surf_rect)
+                x = surf_rect.right + SPONSOR_ENTRY_GAP
+
+        self.entries = entry_specs
+
+    def update(self, dt: float):
+        if not self.segment_surface or self.segment_width <= 0:
+            return
+        self.scroll_offset -= SPONSOR_SCROLL_SPEED * dt
+        while self.scroll_offset <= -self.segment_width:
+            self.scroll_offset += self.segment_width
+        while self.scroll_offset > 0:
+            self.scroll_offset -= self.segment_width
+
+    def draw(self, target_surface: pygame.Surface, top_y: int):
+        bar_rect = pygame.Rect(0, top_y, target_surface.get_width(), self.height)
+        pygame.draw.rect(target_surface, SPONSOR_BAR_BG, bar_rect)
+        pygame.draw.line(target_surface, SPONSOR_BAR_BORDER, (0, top_y), (target_surface.get_width(), top_y), 2)
+
+        if not self.segment_surface:
+            return
+
+        x = self.scroll_offset
+        while x < bar_rect.width:
+            target_surface.blit(self.segment_surface, (x, top_y))
+            x += self.segment_width
+
+        x = self.scroll_offset - self.segment_width
+        while x + self.segment_width > 0:
+            target_surface.blit(self.segment_surface, (x, top_y))
+            x -= self.segment_width
+
+    def has_entries(self) -> bool:
+        return bool(self.entries)
+
+
+sponsor_bar_enabled = False
+sponsor_ticker = SponsorTicker()
+
 
 # region UTILITIES
 
@@ -139,11 +337,12 @@ def match_averages():
 
 # region MATCH CONTROL
 
-def reset_game(new_start_score: int, p1: str, p2: str, target_legs: int = None, double_out: bool = True):
+def reset_game(new_start_score: int, p1: str, p2: str, target_legs: int = None,
+               double_out: bool = True, show_sponsor_bar: bool = False):
     """Reset the WHOLE match (new game from menu)."""
     global START_SCORE, player_names, scores, active_player, history
     global winner_idx, legs_won, leg_starter_idx, LEGS_TO_WIN, state, current_input
-    global finished_legs_stack, DOUBLE_OUT_ENABLED
+    global finished_legs_stack, DOUBLE_OUT_ENABLED, sponsor_bar_enabled, sponsor_ticker
 
     START_SCORE = new_start_score
     player_names = [p1.strip() or "Player 1", p2.strip() or "Player 2"]
@@ -152,6 +351,8 @@ def reset_game(new_start_score: int, p1: str, p2: str, target_legs: int = None, 
     legs_won = [0, 0]
     finished_legs_stack = []  # clear snapshots
     DOUBLE_OUT_ENABLED = bool(double_out)
+    sponsor_bar_enabled = bool(show_sponsor_bar)
+    sponsor_ticker.reload()
 
     # First leg setup
     leg_starter_idx = 0
@@ -265,7 +466,6 @@ def draw_score_switch(x, y, w, h, active: bool, selected: str):
 
 def draw_checkbox(x, y, w, h, label, checked: bool, active: bool):
     """Simple labeled checkbox-style toggle."""
-    global doubleout_rect
     label_surf = font_small.render(label, True, HINT_COLOR)
     screen.blit(label_surf, (x, y - 26))
 
@@ -293,7 +493,6 @@ def draw_checkbox(x, y, w, h, label, checked: bool, active: bool):
     if active:
         draw_focus_arrows(rect)
 
-    doubleout_rect = rect
     return rect
 
 def draw_button(x, y, w, h, label, focused=False):
@@ -366,6 +565,20 @@ def draw_menu():
         focused=(active_input_key == "start")
     )
 
+    sponsor_box_w = 320
+    sponsor_box_h = box_h
+    sponsor_x = WIDTH - sponsor_box_w - 80
+    sponsor_y = HEIGHT - sponsor_box_h - 120
+    sponsor_rect = draw_checkbox(
+        sponsor_x,
+        sponsor_y,
+        sponsor_box_w,
+        sponsor_box_h,
+        "Show sponsor bar",
+        bool(menu_values["showsponsors"]),
+        False,
+    )
+
     pygame.display.flip()
     return {
         "p1": p1_rect,
@@ -375,6 +588,7 @@ def draw_menu():
         "score_501": score_501,
         "legs": legs_rect,
         "doubleout": dob_rect,
+        "showsponsors": sponsor_rect,
         "start": start_btn_rect,
     }
 
@@ -388,7 +602,8 @@ def menu_start_now():
         menu_values["p1"],
         menu_values["p2"],
         int(legs_txt),
-        bool(menu_values["doubleout"])
+        bool(menu_values["doubleout"]),
+        bool(menu_values["showsponsors"])
     )
     return True
 
@@ -412,6 +627,9 @@ def handle_menu_event(event, input_rects):
         if input_rects["doubleout"].collidepoint(event.pos):
             active_input_key = "doubleout"
             menu_values["doubleout"] = not bool(menu_values["doubleout"])
+            return
+        if input_rects["showsponsors"].collidepoint(event.pos):
+            menu_values["showsponsors"] = not bool(menu_values["showsponsors"])
             return
         if input_rects["start"].collidepoint(event.pos):
             active_input_key = "start"
@@ -710,8 +928,17 @@ def draw_game():
     # Draw layered logo with rotation, honoring the 20 px gaps
     draw_logo_layers(hline_y, LOGO_ANGLE)
 
-    # Center vertical line from bottom up to the horizontal divider
-    pygame.draw.line(screen, DIVIDER_COLOR, (half_width, HEIGHT), (half_width, hline_y), 3)
+    bar_top_y = HEIGHT
+    if sponsor_bar_enabled:
+        target_height = max(40, int(SPONSOR_BAR_HEIGHT))
+        if sponsor_ticker.height != target_height:
+            sponsor_ticker.reload()
+        sponsor_ticker.update(frame_dt)
+        bar_top_y = HEIGHT - sponsor_ticker.height
+        sponsor_ticker.draw(screen, bar_top_y)
+
+    # Center vertical line from the top of the sponsor bar (or bottom of screen) up to the horizontal divider
+    pygame.draw.line(screen, DIVIDER_COLOR, (half_width, bar_top_y), (half_width, hline_y), 3)
 
     # Horizontal divider across the screen
     pygame.draw.line(screen, DIVIDER_COLOR, (0, hline_y), (WIDTH, hline_y), 3)
@@ -811,6 +1038,7 @@ def handle_game_keydown(event):
         menu_values["score"] = str(START_SCORE) if START_SCORE in (301, 501) else "301"
         menu_values["legs"] = str(LEGS_TO_WIN)
         menu_values["doubleout"] = DOUBLE_OUT_ENABLED
+        menu_values["showsponsors"] = sponsor_bar_enabled
         state = STATE_MENU
         return
 
@@ -897,6 +1125,7 @@ def handle_end_event(event):
             menu_values["score"] = str(START_SCORE) if START_SCORE in (301, 501) else "301"
             menu_values["legs"] = str(LEGS_TO_WIN)
             menu_values["doubleout"] = DOUBLE_OUT_ENABLED
+            menu_values["showsponsors"] = sponsor_bar_enabled
             state = STATE_MENU
             return
         if event.key == pygame.K_BACKSPACE:
@@ -909,7 +1138,7 @@ def handle_end_event(event):
             state = STATE_GAME
             return
         if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-            reset_game(START_SCORE, player_names[0], player_names[1], LEGS_TO_WIN, DOUBLE_OUT_ENABLED)
+            reset_game(START_SCORE, player_names[0], player_names[1], LEGS_TO_WIN, DOUBLE_OUT_ENABLED, sponsor_bar_enabled)
             return
 
 # region MAIN LOOP
@@ -928,7 +1157,8 @@ def main():
         elif state == STATE_GAME:
             # Update rotation angle based on elapsed time since last tick
             dt = clock.get_time() / 1000  # seconds
-            global LOGO_ANGLE
+            global LOGO_ANGLE, frame_dt
+            frame_dt = dt
             rot_dir = 1 if active_player == 0 else -1
             LOGO_ANGLE = (LOGO_ANGLE + rot_dir * LOGO_ROT_SPEED_DEG * dt) % 360.0
 
