@@ -1,0 +1,5 @@
+# pyinstaller files
+dist
+build
+
+gsszo_darts_counter.spec
