@@ -15,6 +15,25 @@ WIDTH, HEIGHT = display_info.current_w, display_info.current_h
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 pygame.display.set_caption(f"GSSZO Darts Counter")
 
+# --- icon helpers ---
+
+def resource_path(relative_path: str) -> str:
+    """
+    Works both in dev and in PyInstaller .exe
+    """
+    try:
+        base_path = sys._MEIPASS  # type: ignore[attr-defined]
+    except Exception:
+        base_path = os.path.dirname(__file__)
+    return os.path.join(base_path, relative_path)
+
+try:
+    icon_path = resource_path(os.path.join("assets", "gsszo_logo_32x32.png"))
+    icon_surface = pygame.image.load(icon_path).convert_alpha()
+    pygame.display.set_icon(icon_surface)
+except Exception as e:
+    print("Could not set window icon:", e)
+
 # Colors
 BG_COLOR = (20, 20, 20)
 TEXT_COLOR = (230, 230, 230)
