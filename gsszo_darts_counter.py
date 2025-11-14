@@ -52,8 +52,8 @@ SPONSOR_BAR_BORDER = (70, 70, 70)
 SPONSOR_TEXT_COLOR = (240, 240, 240)
 SPONSOR_BAR_HEIGHT = 40  # adjustable height for the sponsor ticker
 SPONSOR_SCROLL_SPEED = 20  # pixels per second
-SPONSOR_LOGO_GAP = 24
-SPONSOR_ENTRY_GAP = 80
+SPONSOR_LOGO_GAP = 20
+SPONSOR_ENTRY_GAP = 40
 
 # Fonts
 font_title = pygame.font.SysFont(None, 100)
@@ -62,7 +62,7 @@ font_big   = pygame.font.SysFont(None, 72)
 font_med   = pygame.font.SysFont(None, 46)
 font_small = pygame.font.SysFont(None, 30)
 font_round = pygame.font.SysFont(None, 46)
-font_sponsor = pygame.font.SysFont(None, 32)
+font_sponsor = pygame.font.SysFont(None, 28)
 
 clock = pygame.time.Clock()
 frame_dt = 0.0
@@ -99,6 +99,8 @@ menu_values = {
 }
 active_input_key = "p1"    # "p1" | "p2" | "score" | "legs" | "doubleout" | "start"
 start_btn_rect = None      # set in draw_menu()
+settings_menu_open = False
+settings_panel_rect = None
 
 # ---- ASSETS: LOGO (two-layer, with fallback) ----
 ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
@@ -495,6 +497,38 @@ def draw_checkbox(x, y, w, h, label, checked: bool, active: bool):
 
     return rect
 
+def draw_settings_button(x, y, size, active: bool):
+    rect = pygame.Rect(x, y, size, size)
+    mouse_pos = pygame.mouse.get_pos()
+    hover = rect.collidepoint(mouse_pos)
+
+    fill_color = ACCENT_ACTIVE if active else (BTN_BG_HOVER if hover else BTN_BG)
+    pygame.draw.rect(screen, fill_color, rect, border_radius=10)
+    pygame.draw.rect(
+        screen,
+        BOX_BORDER_ACTIVE if active else BOX_BORDER,
+        rect,
+        2,
+        border_radius=10,
+    )
+
+    line_width = size * 0.75
+    line_height = max(3, size // 10)
+    spacing = size // 4
+    left = x + (size - line_width) / 2
+    center_y = y + size / 2
+
+    for offset in (-spacing, 0, spacing):
+        line_rect = pygame.Rect(
+            left,
+            center_y + offset - line_height / 2,
+            line_width,
+            line_height,
+        )
+        pygame.draw.rect(screen, TEXT_COLOR, line_rect, border_radius=int(line_height / 2))
+
+    return rect
+
 def draw_button(x, y, w, h, label, focused=False):
     mouse_pos = pygame.mouse.get_pos()
     rect = pygame.Rect(x, y, w, h)
@@ -524,8 +558,13 @@ def draw_button(x, y, w, h, label, focused=False):
     return rect, hover
 
 def draw_menu():
-    global start_btn_rect
+    global start_btn_rect, settings_panel_rect
     screen.fill(BG_COLOR)
+
+    settings_btn_size = 64
+    settings_btn_x = 60
+    settings_btn_y = 60
+    settings_rect = draw_settings_button(settings_btn_x, settings_btn_y, settings_btn_size, settings_menu_open)
 
     title = "GSSZO Darts Counter"
     title_surf = font_title.render(title, True, TEXT_COLOR)
@@ -565,19 +604,28 @@ def draw_menu():
         focused=(active_input_key == "start")
     )
 
-    sponsor_box_w = 320
-    sponsor_box_h = box_h
-    sponsor_x = WIDTH - sponsor_box_w - 80
-    sponsor_y = HEIGHT - sponsor_box_h - 120
-    sponsor_rect = draw_checkbox(
-        sponsor_x,
-        sponsor_y,
-        sponsor_box_w,
-        sponsor_box_h,
-        "Show sponsor bar",
-        bool(menu_values["showsponsors"]),
-        False,
-    )
+    showsponsors_rect = None
+    settings_panel_rect = None
+    if settings_menu_open:
+        panel_padding = 20
+        panel_w = 200
+        panel_h = panel_padding * 2 + 26 + box_h
+        panel_x = settings_btn_x
+        panel_y = settings_btn_y + settings_btn_size + 20
+        settings_panel_rect = pygame.Rect(panel_x, panel_y, panel_w, panel_h)
+        pygame.draw.rect(screen, BOX_BG, settings_panel_rect, border_radius=12)
+        pygame.draw.rect(screen, BOX_BORDER_ACTIVE, settings_panel_rect, 2, border_radius=12)
+
+        checkbox_y = panel_y + panel_padding + 26
+        showsponsors_rect = draw_checkbox(
+            panel_x + panel_padding,
+            checkbox_y,
+            panel_w - panel_padding * 2,
+            box_h,
+            "Show sponsors",
+            bool(menu_values["showsponsors"]),
+            False,
+        )
 
     pygame.display.flip()
     return {
@@ -588,7 +636,8 @@ def draw_menu():
         "score_501": score_501,
         "legs": legs_rect,
         "doubleout": dob_rect,
-        "showsponsors": sponsor_rect,
+        "settings": settings_rect,
+        "showsponsors": showsponsors_rect,
         "start": start_btn_rect,
     }
 
@@ -596,6 +645,7 @@ def menu_toggle_score():
     menu_values["score"] = "501" if menu_values["score"] == "301" else "301"
 
 def menu_start_now():
+    global settings_menu_open
     legs_txt = ''.join(ch for ch in menu_values["legs"] if ch.isdigit()) or "2"
     reset_game(
         int(menu_values["score"]),
@@ -605,12 +655,20 @@ def menu_start_now():
         bool(menu_values["doubleout"]),
         bool(menu_values["showsponsors"])
     )
+    settings_menu_open = False
     return True
 
 def handle_menu_event(event, input_rects):
-    global active_input_key, state
+    global active_input_key, state, settings_menu_open, settings_panel_rect
 
     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        settings_rect = input_rects.get("settings")
+        if settings_rect and settings_rect.collidepoint(event.pos):
+            settings_menu_open = not settings_menu_open
+            return
+        if settings_menu_open and settings_panel_rect and not settings_panel_rect.collidepoint(event.pos):
+            settings_menu_open = False
+            # continue handling click for other controls after closing
         if input_rects["p1"].collidepoint(event.pos):
             active_input_key = "p1"; return
         if input_rects["p2"].collidepoint(event.pos):
@@ -628,7 +686,8 @@ def handle_menu_event(event, input_rects):
             active_input_key = "doubleout"
             menu_values["doubleout"] = not bool(menu_values["doubleout"])
             return
-        if input_rects["showsponsors"].collidepoint(event.pos):
+        showsponsors_rect = input_rects.get("showsponsors")
+        if settings_menu_open and showsponsors_rect and showsponsors_rect.collidepoint(event.pos):
             menu_values["showsponsors"] = not bool(menu_values["showsponsors"])
             return
         if input_rects["start"].collidepoint(event.pos):
@@ -639,6 +698,9 @@ def handle_menu_event(event, input_rects):
 
     elif event.type == pygame.KEYDOWN:
         if event.key == pygame.K_ESCAPE:
+            if settings_menu_open:
+                settings_menu_open = False
+                return
             pygame.quit(); sys.exit()
         if event.key == pygame.K_TAB:
             order = ["p1", "p2", "score", "legs", "doubleout", "start"]
