@@ -57,12 +57,12 @@ PALETTE_LIGHT = {
     "BG_COLOR": (230, 230, 230),
     "TEXT_COLOR": (20, 20, 20),
     "HINT_COLOR": (95, 95, 95),
-    "ACCENT_ACTIVE": (155, 35, 155),
+    "ACCENT_ACTIVE": (138, 36, 50),
     "ACCENT_INACTIVE": (175, 175, 175),
     "DIVIDER_COLOR": (155, 155, 155),
     "BOX_BG": (220, 220, 220),
     "BOX_BORDER": (165, 165, 165),
-    "BOX_BORDER_ACTIVE": (155, 35, 155),
+    "BOX_BORDER_ACTIVE": (138, 36, 50),
     "BTN_BG": (230, 234, 240),
     "BTN_BG_HOVER": (214, 222, 232),
     "SPONSOR_BAR_BG": (220, 220, 220),
@@ -970,7 +970,7 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
     rem_label_rect = rem_label_surf.get_rect(center=(x_start + width // 2, rem_label_y))
     screen.blit(rem_label_surf, rem_label_rect)
 
-    rem_surf = font_huge.render(str(remaining), True, TEXT_COLOR)
+    rem_surf = font_huge.render(str(remaining), True, title_color)
     rem_rect = rem_surf.get_rect(center=(x_start + width // 2, rem_label_y + 80))
     screen.blit(rem_surf, rem_rect)
 
