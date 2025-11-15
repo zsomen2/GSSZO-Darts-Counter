@@ -35,14 +35,14 @@ try:
 except Exception as e:
     print("Could not set window icon:", e)
 
-# Colors
+# Colours
 PALETTE_DARK = {
-    "BG_COLOR": (20, 20, 20),
-    "TEXT_COLOR": (230, 230, 230),
-    "HINT_COLOR": (160, 160, 160),
+    "BG_COLOUR": (20, 20, 20),
+    "TEXT_COLOUR": (230, 230, 230),
+    "HINT_COLOUR": (160, 160, 160),
     "ACCENT_ACTIVE": (100, 220, 100),
     "ACCENT_INACTIVE": (100, 100, 100),
-    "DIVIDER_COLOR": (80, 80, 80),
+    "DIVIDER_COLOUR": (80, 80, 80),
     "BOX_BG": (35, 35, 35),
     "BOX_BORDER": (90, 90, 90),
     "BOX_BORDER_ACTIVE": (100, 220, 100),
@@ -50,16 +50,16 @@ PALETTE_DARK = {
     "BTN_BG_HOVER": (80, 80, 80),
     "SPONSOR_BAR_BG": (35, 35, 35),
     "SPONSOR_BAR_BORDER": (80, 80, 80),
-    "SPONSOR_TEXT_COLOR": (230, 230, 230),
+    "SPONSOR_TEXT_COLOUR": (230, 230, 230),
 }
 
 PALETTE_LIGHT = {
-    "BG_COLOR": (230, 230, 230),
-    "TEXT_COLOR": (20, 20, 20),
-    "HINT_COLOR": (95, 95, 95),
+    "BG_COLOUR": (230, 230, 230),
+    "TEXT_COLOUR": (20, 20, 20),
+    "HINT_COLOUR": (95, 95, 95),
     "ACCENT_ACTIVE": (138, 36, 50),
     "ACCENT_INACTIVE": (175, 175, 175),
-    "DIVIDER_COLOR": (155, 155, 155),
+    "DIVIDER_COLOUR": (155, 155, 155),
     "BOX_BG": (220, 220, 220),
     "BOX_BORDER": (165, 165, 165),
     "BOX_BORDER_ACTIVE": (138, 36, 50),
@@ -67,15 +67,15 @@ PALETTE_LIGHT = {
     "BTN_BG_HOVER": (214, 222, 232),
     "SPONSOR_BAR_BG": (220, 220, 220),
     "SPONSOR_BAR_BORDER": (155, 155, 155),
-    "SPONSOR_TEXT_COLOR": (20, 20, 20),
+    "SPONSOR_TEXT_COLOUR": (20, 20, 20),
 }
 
-BG_COLOR = PALETTE_DARK["BG_COLOR"]
-TEXT_COLOR = PALETTE_DARK["TEXT_COLOR"]
-HINT_COLOR = PALETTE_DARK["HINT_COLOR"]
+BG_COLOUR = PALETTE_DARK["BG_COLOUR"]
+TEXT_COLOUR = PALETTE_DARK["TEXT_COLOUR"]
+HINT_COLOUR = PALETTE_DARK["HINT_COLOUR"]
 ACCENT_ACTIVE = PALETTE_DARK["ACCENT_ACTIVE"]
 ACCENT_INACTIVE = PALETTE_DARK["ACCENT_INACTIVE"]
-DIVIDER_COLOR = PALETTE_DARK["DIVIDER_COLOR"]
+DIVIDER_COLOUR = PALETTE_DARK["DIVIDER_COLOUR"]
 BOX_BG = PALETTE_DARK["BOX_BG"]
 BOX_BORDER = PALETTE_DARK["BOX_BORDER"]
 BOX_BORDER_ACTIVE = PALETTE_DARK["BOX_BORDER_ACTIVE"]
@@ -83,7 +83,7 @@ BTN_BG = PALETTE_DARK["BTN_BG"]
 BTN_BG_HOVER = PALETTE_DARK["BTN_BG_HOVER"]
 SPONSOR_BAR_BG = PALETTE_DARK["SPONSOR_BAR_BG"]
 SPONSOR_BAR_BORDER = PALETTE_DARK["SPONSOR_BAR_BORDER"]
-SPONSOR_TEXT_COLOR = PALETTE_DARK["SPONSOR_TEXT_COLOR"]
+SPONSOR_TEXT_COLOUR = PALETTE_DARK["SPONSOR_TEXT_COLOUR"]
 
 def _apply_palette(palette):
     for key, value in palette.items():
@@ -283,11 +283,11 @@ class SponsorTicker:
         logo_target_h = max(10, self.height - 10)
 
         if names:
-            prefix_surface = font_sponsor.render("Támogatóink:", True, SPONSOR_TEXT_COLOR)
+            prefix_surface = font_sponsor.render("Támogatóink:", True, SPONSOR_TEXT_COLOUR)
             self._append_surface_entry(entry_specs, prefix_surface)
 
         for name in names:
-            text_surface = font_sponsor.render(name, True, SPONSOR_TEXT_COLOR)
+            text_surface = font_sponsor.render(name, True, SPONSOR_TEXT_COLOUR)
             normalized = self._normalize_name(name)
             raw_logo = self._load_logo(normalized)
             logo_surface = None
@@ -311,11 +311,11 @@ class SponsorTicker:
             })
 
         if organizers:
-            header_surface = font_sponsor.render("Szervezők:", True, SPONSOR_TEXT_COLOR)
+            header_surface = font_sponsor.render("Szervezők:", True, SPONSOR_TEXT_COLOUR)
             self._append_surface_entry(entry_specs, header_surface)
 
             for name in organizers:
-                text_surface = font_sponsor.render(name, True, SPONSOR_TEXT_COLOR)
+                text_surface = font_sponsor.render(name, True, SPONSOR_TEXT_COLOUR)
                 self._append_surface_entry(entry_specs, text_surface)
 
         if not entry_specs:
@@ -395,7 +395,7 @@ sponsor_bar_enabled = False
 sponsor_ticker = SponsorTicker()
 
 def apply_theme(dark_mode: bool):
-    """Switch between dark and light color palettes and update logo assets."""
+    """Switch between dark and light colour palettes and update logo assets."""
     global current_dark_mode, LOGO_INNER_ORIG, LOGO_RING_ORIG
 
     if dark_mode == current_dark_mode:
@@ -514,7 +514,7 @@ def revert_last_finished_leg():
 # region MENU AND RENDERING EVENTS
 
 def draw_input_box(x, y, w, h, label, value, active=False):
-    label_surf = font_small.render(label, True, HINT_COLOR)
+    label_surf = font_small.render(label, True, HINT_COLOUR)
     screen.blit(label_surf, (x, y - 26))
 
     rect = pygame.Rect(x, y, w, h)
@@ -527,7 +527,7 @@ def draw_input_box(x, y, w, h, label, value, active=False):
         border_radius=10,
     )
 
-    text_surf = font_med.render(value, True, TEXT_COLOR)
+    text_surf = font_med.render(value, True, TEXT_COLOUR)
     text_rect = text_surf.get_rect(midleft=(x + 14, y + h // 2))
     screen.blit(text_surf, text_rect)
 
@@ -537,7 +537,7 @@ def draw_input_box(x, y, w, h, label, value, active=False):
     return rect
 
 def draw_score_switch(x, y, w, h, active: bool, selected: str):
-    label_surf = font_small.render("Starting score", True, HINT_COLOR)
+    label_surf = font_small.render("Starting score", True, HINT_COLOUR)
     screen.blit(label_surf, (x, y - 26))
 
     outer = pygame.Rect(x, y, w, h)
@@ -568,16 +568,16 @@ def draw_score_switch(x, y, w, h, active: bool, selected: str):
         border_radius=10,
     )
 
-    # Text colors
+    # Text colours
     if selected == "301":
-        t301_color = BTN_BG
-        t501_color = TEXT_COLOR
+        t301_colour = BTN_BG
+        t501_colour = TEXT_COLOUR
     else:
-        t301_color = TEXT_COLOR
-        t501_color = BTN_BG
+        t301_colour = TEXT_COLOUR
+        t501_colour = BTN_BG
 
-    t301 = font_med.render("301", True, t301_color)
-    t501 = font_med.render("501", True, t501_color)
+    t301 = font_med.render("301", True, t301_colour)
+    t501 = font_med.render("501", True, t501_colour)
 
     screen.blit(t301, t301.get_rect(center=r301.center))
     screen.blit(t501, t501.get_rect(center=r501.center))
@@ -589,7 +589,7 @@ def draw_score_switch(x, y, w, h, active: bool, selected: str):
 
 def draw_checkbox(x, y, w, h, label, checked: bool, active: bool):
     """Simple labeled checkbox-style toggle."""
-    label_surf = font_small.render(label, True, HINT_COLOR)
+    label_surf = font_small.render(label, True, HINT_COLOUR)
     screen.blit(label_surf, (x, y - 26))
 
     rect = pygame.Rect(x, y, w, h)
@@ -609,7 +609,7 @@ def draw_checkbox(x, y, w, h, label, checked: bool, active: bool):
         pygame.draw.rect(screen, ACCENT_ACTIVE, inner, border_radius=8)
 
     txt = "ON" if checked else "OFF"
-    txt_surf = font_med.render(f"{txt}", True, TEXT_COLOR)
+    txt_surf = font_med.render(f"{txt}", True, TEXT_COLOUR)
     txt_rect = txt_surf.get_rect(midleft=(inner.right + 16, y + h // 2))
     screen.blit(txt_surf, txt_rect)
 
@@ -623,8 +623,8 @@ def draw_settings_button(x, y, size, active: bool):
     mouse_pos = pygame.mouse.get_pos()
     hover = rect.collidepoint(mouse_pos)
 
-    fill_color = ACCENT_ACTIVE if active else (BTN_BG_HOVER if hover else BTN_BG)
-    pygame.draw.rect(screen, fill_color, rect, border_radius=10)
+    fill_colour = ACCENT_ACTIVE if active else (BTN_BG_HOVER if hover else BTN_BG)
+    pygame.draw.rect(screen, fill_colour, rect, border_radius=10)
     pygame.draw.rect(
         screen,
         BOX_BORDER_ACTIVE if active else BOX_BORDER,
@@ -646,7 +646,7 @@ def draw_settings_button(x, y, size, active: bool):
             line_width,
             line_height,
         )
-        pygame.draw.rect(screen, TEXT_COLOR, line_rect, border_radius=int(line_height / 2))
+        pygame.draw.rect(screen, TEXT_COLOUR, line_rect, border_radius=int(line_height / 2))
 
     return rect
 
@@ -669,7 +669,7 @@ def draw_button(x, y, w, h, label, focused=False):
         border_radius=12,
     )
 
-    txt = font_big.render(label, True, TEXT_COLOR)
+    txt = font_big.render(label, True, TEXT_COLOUR)
     txt_rect = txt.get_rect(center=rect.center)
     screen.blit(txt, txt_rect)
 
@@ -680,7 +680,7 @@ def draw_button(x, y, w, h, label, focused=False):
 
 def draw_menu():
     global start_btn_rect, settings_panel_rect
-    screen.fill(BG_COLOR)
+    screen.fill(BG_COLOUR)
 
     settings_btn_size = 64
     settings_btn_x = 60
@@ -688,7 +688,7 @@ def draw_menu():
     settings_rect = draw_settings_button(settings_btn_x, settings_btn_y, settings_btn_size, settings_menu_open)
 
     title = "GSSZO Darts Counter"
-    title_surf = font_title.render(title, True, TEXT_COLOR)
+    title_surf = font_title.render(title, True, TEXT_COLOUR)
     title_rect = title_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 330))
     screen.blit(title_surf, title_rect)
 
@@ -914,14 +914,14 @@ def draw_focus_arrows(rect: pygame.Rect):
 
 def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, match_avg_val):
     title = player_names[player_idx]
-    title_color = ACCENT_ACTIVE if is_active else ACCENT_INACTIVE
+    title_colour = ACCENT_ACTIVE if is_active else ACCENT_INACTIVE
     title_top_center = (x_start + width // 2, 50)  # adjust 50 up/down if needed
 
     draw_player_name_multiline(
         screen,
         font_big,          # same font you used before
         title,
-        title_color,
+        title_colour,
         title_top_center,
     )
 
@@ -943,21 +943,21 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
     legs_rect = pygame.Rect(badge_x, stats_top_y, badge_w, badge_h)
     pygame.draw.rect(screen, BOX_BG, legs_rect, border_radius=12)
     pygame.draw.rect(screen, BOX_BORDER, legs_rect, 2, border_radius=12)
-    legs_text_surf = font_small.render(f"Legs Won: {legs_won[player_idx]}", True, TEXT_COLOR)
+    legs_text_surf = font_small.render(f"Legs Won: {legs_won[player_idx]}", True, TEXT_COLOUR)
     screen.blit(legs_text_surf, legs_text_surf.get_rect(center=legs_rect.center))
 
     # ----- Leg average badge -----
     leg_avg_rect = pygame.Rect(badge_x, legs_rect.bottom + badge_gap_y, badge_w, badge_h)
     pygame.draw.rect(screen, BOX_BG, leg_avg_rect, border_radius=12)
     pygame.draw.rect(screen, BOX_BORDER, leg_avg_rect, 2, border_radius=12)
-    leg_avg_text_surf = font_small.render(f"Leg avg: {leg_avg_val:.1f}", True, TEXT_COLOR)
+    leg_avg_text_surf = font_small.render(f"Leg avg: {leg_avg_val:.1f}", True, TEXT_COLOUR)
     screen.blit(leg_avg_text_surf, leg_avg_text_surf.get_rect(center=leg_avg_rect.center))
 
     # ----- Match average badge -----
     match_avg_rect = pygame.Rect(badge_x, leg_avg_rect.bottom + badge_gap_y, badge_w, badge_h)
     pygame.draw.rect(screen, BOX_BG, match_avg_rect, border_radius=12)
     pygame.draw.rect(screen, BOX_BORDER, match_avg_rect, 2, border_radius=12)
-    match_avg_text_surf = font_small.render(f"Match avg: {match_avg_val:.1f}", True, TEXT_COLOR)
+    match_avg_text_surf = font_small.render(f"Match avg: {match_avg_val:.1f}", True, TEXT_COLOUR)
     screen.blit(match_avg_text_surf, match_avg_text_surf.get_rect(center=match_avg_rect.center))
 
     # ----- Remaining score -----
@@ -966,11 +966,11 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
 
     # Place "Remaining" below the badges so nothing overlaps
     rem_label_y = match_avg_rect.bottom + 40
-    rem_label_surf = font_med.render("Remaining:", True, TEXT_COLOR)
+    rem_label_surf = font_med.render("Remaining:", True, TEXT_COLOUR)
     rem_label_rect = rem_label_surf.get_rect(center=(x_start + width // 2, rem_label_y))
     screen.blit(rem_label_surf, rem_label_rect)
 
-    rem_surf = font_huge.render(str(remaining), True, title_color)
+    rem_surf = font_huge.render(str(remaining), True, title_colour)
     rem_rect = rem_surf.get_rect(center=(x_start + width // 2, rem_label_y + 80))
     screen.blit(rem_surf, rem_rect)
 
@@ -980,7 +980,7 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
     # ----- Current input (only for active player) -----
     input_label_y = rem_rect.bottom + 40
     if is_active:
-        input_label = font_small.render("Current input:", True, TEXT_COLOR)
+        input_label = font_small.render("Current input:", True, TEXT_COLOUR)
         screen.blit(input_label, (x_start + 40, input_label_y))
 
         input_text = current_input if current_input != "" else "-"
@@ -989,7 +989,7 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
 
     # ----- Rounds list -----
     rounds_label_y = input_label_y + 80
-    rounds_label = font_small.render("Rounds:", True, TEXT_COLOR)
+    rounds_label = font_small.render("Rounds:", True, TEXT_COLOUR)
     screen.blit(rounds_label, (x_start + 40, rounds_label_y))
 
     # Table header
@@ -998,9 +998,9 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
     col_score_x = x_start + 140
     col_rem_x   = x_start + 320
 
-    header_hash  = font_round.render("#", True, TEXT_COLOR)
-    header_score = font_round.render("Score", True, TEXT_COLOR)
-    header_rem   = font_round.render("Remaining", True, TEXT_COLOR)
+    header_hash  = font_round.render("#", True, TEXT_COLOUR)
+    header_score = font_round.render("Score", True, TEXT_COLOUR)
+    header_rem   = font_round.render("Remaining", True, TEXT_COLOUR)
 
     screen.blit(header_hash,  (col_round_x, header_y))
     screen.blit(header_score, (col_score_x, header_y))
@@ -1036,9 +1036,9 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
         score_text = f"{score_val:>3}"
         rem_text   = f"{rem_val:>3}"
 
-        round_surf = font_round.render(round_text, True, TEXT_COLOR)
-        score_surf = font_round.render(score_text, True, TEXT_COLOR)
-        rem_surf   = font_round.render(rem_text,   True, TEXT_COLOR)
+        round_surf = font_round.render(round_text, True, TEXT_COLOUR)
+        score_surf = font_round.render(score_text, True, TEXT_COLOUR)
+        rem_surf   = font_round.render(rem_text,   True, TEXT_COLOUR)
 
         screen.blit(round_surf, (col_round_x, y))
         screen.blit(score_surf, (col_score_x + 10, y))
@@ -1050,7 +1050,7 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
     hline_y = min(rem_rect.bottom + pad_below_remaining, input_label_y - 8)
     return hline_y
 
-def draw_player_name_multiline(surface, font, text, color, top_center_pos):
+def draw_player_name_multiline(surface, font, text, colour, top_center_pos):
     """
     Draw the player name in up to 3 lines with a fixed top.
 
@@ -1091,7 +1091,7 @@ def draw_player_name_multiline(surface, font, text, color, top_center_pos):
     y = top_y
 
     for line in lines:
-        surf = font.render(line, True, color)
+        surf = font.render(line, True, colour)
         rect = surf.get_rect(midtop=(cx, y))
         surface.blit(surf, rect)
         y = rect.bottom + line_gap
@@ -1129,7 +1129,7 @@ def draw_logo_layers(max_bottom_y: int, angle_deg: float):
     return
 
 def draw_game():
-    screen.fill(BG_COLOR)
+    screen.fill(BG_COLOUR)
 
     # Compute averages
     leg_avg_vals = [avg(scores[0]), avg(scores[1])]
@@ -1157,10 +1157,10 @@ def draw_game():
         sponsor_ticker.draw(screen, bar_top_y)
 
     # Center vertical line from the top of the sponsor bar (or bottom of screen) up to the horizontal divider
-    pygame.draw.line(screen, DIVIDER_COLOR, (half_width, bar_top_y), (half_width, hline_y), 3)
+    pygame.draw.line(screen, DIVIDER_COLOUR, (half_width, bar_top_y), (half_width, hline_y), 3)
 
     # Horizontal divider across the screen
-    pygame.draw.line(screen, DIVIDER_COLOR, (0, hline_y), (WIDTH, hline_y), 3)
+    pygame.draw.line(screen, DIVIDER_COLOUR, (0, hline_y), (WIDTH, hline_y), 3)
 
     pygame.display.flip()
 
@@ -1301,10 +1301,10 @@ def handle_game_keydown(event):
 # region END SCREEN
 
 def draw_end():
-    screen.fill(BG_COLOR)
+    screen.fill(BG_COLOUR)
 
     title = "Match Over"
-    t_surf = font_title.render(title, True, TEXT_COLOR)
+    t_surf = font_title.render(title, True, TEXT_COLOUR)
     t_rect = t_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 200))
     screen.blit(t_surf, t_rect)
 
@@ -1315,12 +1315,12 @@ def draw_end():
         screen.blit(win_surf, win_rect)
 
     player_line = f"{player_names[0]} vs. {player_names[1]}"
-    player_surf = font_med.render(player_line, True, TEXT_COLOR)
+    player_surf = font_med.render(player_line, True, TEXT_COLOUR)
     player_rect = player_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 10))
     screen.blit(player_surf, player_rect)
 
     legs_line = f"Legs won:  {legs_won[0]}   |   {legs_won[1]}"
-    legs_surf = font_small.render(legs_line, True, HINT_COLOR)
+    legs_surf = font_small.render(legs_line, True, HINT_COLOUR)
     legs_rect = legs_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 60))
     screen.blit(legs_surf, legs_rect)
 
@@ -1328,7 +1328,7 @@ def draw_end():
     rem0 = START_SCORE - sum(scores[0])
     rem1 = START_SCORE - sum(scores[1])
     rem_line = f"Remaining:  {rem0}    |    {rem1}"
-    rem_surf = font_small.render(rem_line, True, HINT_COLOR)
+    rem_surf = font_small.render(rem_line, True, HINT_COLOUR)
     rem_rect = rem_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
     screen.blit(rem_surf, rem_rect)
 
