@@ -36,24 +36,103 @@ except Exception as e:
     print("Could not set window icon:", e)
 
 # Colors
-BG_COLOR = (20, 20, 20)
-TEXT_COLOR = (230, 230, 230)
-HINT_COLOR = (160, 160, 160)
-ACCENT_ACTIVE = (100, 220, 100)
-ACCENT_INACTIVE = (100, 100, 100)
-DIVIDER_COLOR = (80, 80, 80)
-BOX_BG = (35, 35, 35)
-BOX_BORDER = (90, 90, 90)
-BOX_BORDER_ACTIVE = (160, 160, 160)
-BTN_BG = (60, 60, 60)
-BTN_BG_HOVER = (80, 80, 80)
-SPONSOR_BAR_BG = (60, 60, 60)
-SPONSOR_BAR_BORDER = (70, 70, 70)
-SPONSOR_TEXT_COLOR = (240, 240, 240)
+PALETTE_DARK = {
+    "BG_COLOR": (20, 20, 20),
+    "TEXT_COLOR": (230, 230, 230),
+    "HINT_COLOR": (160, 160, 160),
+    "ACCENT_ACTIVE": (100, 220, 100),
+    "ACCENT_INACTIVE": (100, 100, 100),
+    "DIVIDER_COLOR": (80, 80, 80),
+    "BOX_BG": (35, 35, 35),
+    "BOX_BORDER": (90, 90, 90),
+    "BOX_BORDER_ACTIVE": (100, 220, 100),
+    "BTN_BG": (60, 60, 60),
+    "BTN_BG_HOVER": (80, 80, 80),
+    "SPONSOR_BAR_BG": (35, 35, 35),
+    "SPONSOR_BAR_BORDER": (80, 80, 80),
+    "SPONSOR_TEXT_COLOR": (230, 230, 230),
+}
+
+PALETTE_LIGHT = {
+    "BG_COLOR": (230, 230, 230),
+    "TEXT_COLOR": (20, 20, 20),
+    "HINT_COLOR": (95, 95, 95),
+    "ACCENT_ACTIVE": (155, 35, 155),
+    "ACCENT_INACTIVE": (175, 175, 175),
+    "DIVIDER_COLOR": (155, 155, 155),
+    "BOX_BG": (220, 220, 220),
+    "BOX_BORDER": (165, 165, 165),
+    "BOX_BORDER_ACTIVE": (155, 35, 155),
+    "BTN_BG": (230, 234, 240),
+    "BTN_BG_HOVER": (214, 222, 232),
+    "SPONSOR_BAR_BG": (220, 220, 220),
+    "SPONSOR_BAR_BORDER": (155, 155, 155),
+    "SPONSOR_TEXT_COLOR": (20, 20, 20),
+}
+
+BG_COLOR = PALETTE_DARK["BG_COLOR"]
+TEXT_COLOR = PALETTE_DARK["TEXT_COLOR"]
+HINT_COLOR = PALETTE_DARK["HINT_COLOR"]
+ACCENT_ACTIVE = PALETTE_DARK["ACCENT_ACTIVE"]
+ACCENT_INACTIVE = PALETTE_DARK["ACCENT_INACTIVE"]
+DIVIDER_COLOR = PALETTE_DARK["DIVIDER_COLOR"]
+BOX_BG = PALETTE_DARK["BOX_BG"]
+BOX_BORDER = PALETTE_DARK["BOX_BORDER"]
+BOX_BORDER_ACTIVE = PALETTE_DARK["BOX_BORDER_ACTIVE"]
+BTN_BG = PALETTE_DARK["BTN_BG"]
+BTN_BG_HOVER = PALETTE_DARK["BTN_BG_HOVER"]
+SPONSOR_BAR_BG = PALETTE_DARK["SPONSOR_BAR_BG"]
+SPONSOR_BAR_BORDER = PALETTE_DARK["SPONSOR_BAR_BORDER"]
+SPONSOR_TEXT_COLOR = PALETTE_DARK["SPONSOR_TEXT_COLOR"]
+
+def _apply_palette(palette):
+    for key, value in palette.items():
+        globals()[key] = value
+
+_apply_palette(PALETTE_DARK)
+
+# Constants
 SPONSOR_BAR_HEIGHT = 40  # adjustable height for the sponsor ticker
 SPONSOR_SCROLL_SPEED = 20  # pixels per second
 SPONSOR_LOGO_GAP = 20
 SPONSOR_ENTRY_GAP = 40
+
+current_fullscreen = True
+current_dark_mode = True
+
+# Display mode helpers
+
+def _maximize_window_if_possible():
+    try:
+        from pygame._sdl2 import Window  # type: ignore
+
+        window = Window.from_display_module()
+        window.maximize()
+    except Exception:
+        pass
+
+def apply_display_mode(fullscreen: bool, force: bool = False):
+    """Switch between fullscreen and maximized windowed modes."""
+    global screen, WIDTH, HEIGHT, current_fullscreen
+
+    if screen is not None and not force and fullscreen == current_fullscreen:
+        return
+
+    flags = pygame.FULLSCREEN if fullscreen else pygame.RESIZABLE
+
+    info = pygame.display.Info()
+    size = (info.current_w, info.current_h)
+    screen_surface = pygame.display.set_mode(size, flags)
+
+    if not fullscreen:
+        _maximize_window_if_possible()
+
+    WIDTH, HEIGHT = screen_surface.get_size()
+    screen = screen_surface
+    current_fullscreen = fullscreen
+
+apply_display_mode(True, force=True)
+pygame.display.set_caption("GSSZO Darts Counter")
 
 # Fonts
 font_title = pygame.font.SysFont(None, 100)
@@ -96,6 +175,8 @@ menu_values = {
     "legs": "2",      # number as string
     "doubleout": True,
     "showsponsors": False,
+    "darkmode": True,
+    "fullscreen": True,
 }
 active_input_key = "p1"    # "p1" | "p2" | "score" | "legs" | "doubleout" | "start"
 start_btn_rect = None      # set in draw_menu()
@@ -119,8 +200,13 @@ def _load_alpha(path):
         return None
 
 # Preferred two-piece assets
-LOGO_INNER_ORIG = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_inner.png"))
-LOGO_RING_ORIG  = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_outer.png"))
+LOGO_INNER_DARK = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_inner_white.png"))
+LOGO_RING_DARK  = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_outer_white.png"))
+LOGO_INNER_LIGHT = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_inner_black.png"))
+LOGO_RING_LIGHT  = _load_alpha(os.path.join(ASSETS_DIR, "gsszo_logo_outer_black.png"))
+
+LOGO_INNER_ORIG = LOGO_INNER_DARK or LOGO_INNER_LIGHT
+LOGO_RING_ORIG = LOGO_RING_DARK or LOGO_RING_LIGHT
 
 # region SPONSOR BAR SUPPORT
 
@@ -305,10 +391,45 @@ class SponsorTicker:
     def has_entries(self) -> bool:
         return bool(self.entries)
 
-
 sponsor_bar_enabled = False
 sponsor_ticker = SponsorTicker()
 
+def apply_theme(dark_mode: bool):
+    """Switch between dark and light color palettes and update logo assets."""
+    global current_dark_mode, LOGO_INNER_ORIG, LOGO_RING_ORIG
+
+    if dark_mode == current_dark_mode:
+        return
+
+    palette = PALETTE_DARK if dark_mode else PALETTE_LIGHT
+    _apply_palette(palette)
+
+    current_dark_mode = dark_mode
+
+    if dark_mode:
+        LOGO_INNER_ORIG = LOGO_INNER_DARK or LOGO_INNER_LIGHT or LOGO_INNER_ORIG
+        LOGO_RING_ORIG = LOGO_RING_DARK or LOGO_RING_LIGHT or LOGO_RING_ORIG
+    else:
+        LOGO_INNER_ORIG = LOGO_INNER_LIGHT or LOGO_INNER_DARK or LOGO_INNER_ORIG
+        LOGO_RING_ORIG = LOGO_RING_LIGHT or LOGO_RING_DARK or LOGO_RING_ORIG
+
+    ticker = globals().get("sponsor_ticker")
+    if ticker:
+        ticker.reload()
+
+def handle_window_resize(event: pygame.event.Event):
+    """Update the window surface when the user resizes in windowed mode."""
+    global screen, WIDTH, HEIGHT
+
+    if event.type != pygame.VIDEORESIZE or current_fullscreen:
+        return
+
+    new_width = max(1, event.w)
+    new_height = max(1, event.h)
+    flags = screen.get_flags() if screen is not None else pygame.RESIZABLE
+    screen_surface = pygame.display.set_mode((new_width, new_height), flags)
+    WIDTH, HEIGHT = screen_surface.get_size()
+    screen = screen_surface
 
 # region UTILITIES
 
@@ -605,11 +726,14 @@ def draw_menu():
     )
 
     showsponsors_rect = None
+    darkmode_rect = None
+    fullscreen_rect = None
     settings_panel_rect = None
     if settings_menu_open:
         panel_padding = 20
         panel_w = 200
-        panel_h = panel_padding * 2 + 26 + box_h
+        checkbox_gap = 36
+        panel_h = panel_padding * 2 + 26 + box_h * 3 + checkbox_gap * 2
         panel_x = settings_btn_x
         panel_y = settings_btn_y + settings_btn_size + 20
         settings_panel_rect = pygame.Rect(panel_x, panel_y, panel_w, panel_h)
@@ -617,6 +741,26 @@ def draw_menu():
         pygame.draw.rect(screen, BOX_BORDER_ACTIVE, settings_panel_rect, 2, border_radius=12)
 
         checkbox_y = panel_y + panel_padding + 26
+        fullscreen_rect = draw_checkbox(
+            panel_x + panel_padding,
+            checkbox_y,
+            panel_w - panel_padding * 2,
+            box_h,
+            "Fullscreen",
+            bool(menu_values["fullscreen"]),
+            False,
+        )
+        checkbox_y += box_h + checkbox_gap
+        darkmode_rect = draw_checkbox(
+            panel_x + panel_padding,
+            checkbox_y,
+            panel_w - panel_padding * 2,
+            box_h,
+            "Dark mode",
+            bool(menu_values["darkmode"]),
+            False,
+        )
+        checkbox_y += box_h + checkbox_gap
         showsponsors_rect = draw_checkbox(
             panel_x + panel_padding,
             checkbox_y,
@@ -638,6 +782,8 @@ def draw_menu():
         "doubleout": dob_rect,
         "settings": settings_rect,
         "showsponsors": showsponsors_rect,
+        "darkmode": darkmode_rect,
+        "fullscreen": fullscreen_rect,
         "start": start_btn_rect,
     }
 
@@ -647,6 +793,7 @@ def menu_toggle_score():
 def menu_start_now():
     global settings_menu_open
     legs_txt = ''.join(ch for ch in menu_values["legs"] if ch.isdigit()) or "2"
+    apply_display_mode(bool(menu_values["fullscreen"]))
     reset_game(
         int(menu_values["score"]),
         menu_values["p1"],
@@ -685,6 +832,16 @@ def handle_menu_event(event, input_rects):
         if input_rects["doubleout"].collidepoint(event.pos):
             active_input_key = "doubleout"
             menu_values["doubleout"] = not bool(menu_values["doubleout"])
+            return
+        fullscreen_rect = input_rects.get("fullscreen")
+        if settings_menu_open and fullscreen_rect and fullscreen_rect.collidepoint(event.pos):
+            menu_values["fullscreen"] = not bool(menu_values["fullscreen"])
+            apply_display_mode(bool(menu_values["fullscreen"]))
+            return
+        darkmode_rect = input_rects.get("darkmode")
+        if settings_menu_open and darkmode_rect and darkmode_rect.collidepoint(event.pos):
+            menu_values["darkmode"] = not bool(menu_values["darkmode"])
+            apply_theme(bool(menu_values["darkmode"]))
             return
         showsponsors_rect = input_rects.get("showsponsors")
         if settings_menu_open and showsponsors_rect and showsponsors_rect.collidepoint(event.pos):
@@ -827,7 +984,7 @@ def draw_player_section(player_idx, x_start, width, is_active, leg_avg_val, matc
         screen.blit(input_label, (x_start + 40, input_label_y))
 
         input_text = current_input if current_input != "" else "-"
-        input_surf = font_big.render(input_text, True, TEXT_COLOR)
+        input_surf = font_big.render(input_text, True, ACCENT_ACTIVE)
         screen.blit(input_surf, (x_start + 40, input_label_y + 30))
 
     # ----- Rounds list -----
@@ -1101,6 +1258,7 @@ def handle_game_keydown(event):
         menu_values["legs"] = str(LEGS_TO_WIN)
         menu_values["doubleout"] = DOUBLE_OUT_ENABLED
         menu_values["showsponsors"] = sponsor_bar_enabled
+        menu_values["fullscreen"] = current_fullscreen
         state = STATE_MENU
         return
 
@@ -1214,6 +1372,7 @@ def main():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit(); sys.exit()
+                handle_window_resize(event)
                 handle_menu_event(event, rects)
 
         elif state == STATE_GAME:
@@ -1227,7 +1386,8 @@ def main():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit(); sys.exit()
-                elif event.type == pygame.KEYDOWN:
+                handle_window_resize(event)
+                if event.type == pygame.KEYDOWN:
                     handle_game_keydown(event)
 
             draw_game()
@@ -1237,6 +1397,7 @@ def main():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit(); sys.exit()
+                handle_window_resize(event)
                 handle_end_event(event)
 
         clock.tick(60)
